@@ -18,7 +18,7 @@ git clone https://github.com/florianreyes/sarah-va.git
 cd sarah-va
 
 #install requirements
-pip -r requirements.txt
+pip3 install -r requirements.txt
 
 #run the file sara.py and sara will start listening"
 python3 sarah.py
