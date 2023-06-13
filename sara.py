@@ -6,10 +6,11 @@ import matplotlib.pyplot as plt
 from datetime import datetime
 import subprocess
 import os
-import stock_list
+from stock_list import stocks
 import json
 import requests
 import config
+
 
 URL = "https://api.openweathermap.org/data/2.5/weather?"
 
@@ -37,39 +38,37 @@ def get_audio():
     return said
 
 
-def get_stocks(t):
-    text_l = t.lower()
-    for word in text_l.split():
-        if word in stock_list.stocks.keys():
-            ticker = yf.Ticker(stock_list.stocks[word])
-            for action in text_l.split():
-                if action == "dividends":
-                    df = ticker.dividends
-                    print(df)
-                    data = df.resample('Y').sum()
-                    data = data.reset_index()
-                    data['Year'] = data['Date'].dt.year
-                    plt.figure()
-                    plt.bar(data['Year'], data['Dividends'])
-                    plt.xlabel('Year')
-                    plt.ylabel('Dividend Yield ($)')
-                    plt.title(
-                        '{} historic dividend yield'.format(word))
-                    plt.xlim(2000, datetime.now().year)
-                    plt.show()
-                elif action == "cash":
-                    print(ticker.cashflow)
-                elif action == "major":
-                    print(ticker.major_holders)
-                elif action == "institutional":
-                    print(ticker.institutional_holders)
+def get_stocks(stock, action):
+    stock_l = stock.lower()
+    action_l = action.lower().split(' ')
 
-                else:
-                    pass
-
+    if stock_l in stocks:
+        ticker = yf.Ticker(stocks[stock_l])
+    else:
+        print("Sorry, I couldn't find that stock.")
+        return
+    for action in action_l:
+        if action == "dividends" or action == "dividend":
+            df = ticker.dividends
+            print(df)
+            data = df.resample('Y').sum()
+            data = data.reset_index()
+            data['Year'] = data['Date'].dt.year
+            plt.figure()
+            plt.bar(data['Year'], data['Dividends'])
+            plt.xlabel('Year')
+            plt.ylabel('Dividend Yield ($)')
+            plt.title('{} historic dividend yield'.format(stock))
+            plt.xlim(2000, datetime.now().year)
+            plt.show()
+        elif action == "cash" or action == "cashflow":
+            print(ticker.cashflow)
+        elif action == "major" or action == "holders":
+            print(ticker.major_holders)
+        elif action == "institutional":
+            print(ticker.institutional_holders)
         else:
-            pass
-
+            print("Sorry, I couldn't find that information.")
 
 def get_weather(t):
     LOCATION = t
@@ -89,31 +88,34 @@ def get_note(note):
     speak("Note saved as " + file_name)
 
 
-WAKE = "hey sarah"
+WAKE = ["hey sara", "okay sara", "hi sara", "hello sara",
+        "sara", "there", "are", "you", "listen"]
 
 while True:
     text = get_audio().lower()
-    if text.count(WAKE) > 0:
-        speak("Hello sir, i am ready")
+    if any(word in text for word in WAKE):
+        speak("Hello sir, I am ready")
         text = get_audio().lower()
 
         NOTE_WORDS = ["note", "make a note",
                       "make a note of this", "write this down", "write down"]
         for word in NOTE_WORDS:
             if word in text:
-                speak("what would you like to note, sir?")
+                speak("What would you like to note, sir?")
                 note = get_audio()
                 get_note(note)
                 speak("Done, sir.")
                 break
 
-        STOCK_WORDS = ["stock", "stuck", "stocks", "market",
+        STOCK_WORDS = ["stock", "stuck","stalk", "stocks", "market",
                        "market data", "stock info", "stock data"]
         for word in STOCK_WORDS:
             if word in text:
-                speak("what stock and what data would you like top know about it sir")
+                speak("What stock would you like to know about, sir?")
                 stock = get_audio()
-                get_stocks(stock)
+                speak("What would you like to know about the stock, sir? Please say dividends, cash, major holders, or institutional holders.")
+                action = get_audio()
+                get_stocks(stock, action)
                 speak("Done, sir.")
                 break
 
@@ -122,8 +124,17 @@ while True:
         for word in WEATHER_WORDS:
             if word in text:
                 speak(
-                    "what location would you like to know the weather in sir, please say the city name")
+                    "What location would you like to know the weather in, sir? Please say the city name.")
                 city = get_audio()
-                get_weather(city)
+                try:
+                    get_weather(city)
+                except:
+                    speak(
+                        "Sorry, sir. I couldn't find the weather in that location. Please repeat the city.")
                 speak("Done, sir.")
                 break
+    GOODBYE_WORDS = ["goodbye", "bye", "see you later", "see you", "later"]
+    for word in GOODBYE_WORDS:
+        if word in text:
+            speak("Goodbye, sir.")
+            exit()
